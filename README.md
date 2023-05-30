@@ -1,2 +1,2 @@
 # Variational-Quantum-EigeinSolver
-The project works with the Variational Quantum Eigein Solver Alogrithm
+The project primarily focuses on the Variational Quantum EigenSolver (VQE) algorithm, which holds a significiant role in my bachelor thesis. I had the opportunity to work on this algorithm during my internship at Phenikaa Institute For Advanced Study. It has not only provided a solid foundation of my current research but also serves as a steeping stone for my future endeavors in this field.
