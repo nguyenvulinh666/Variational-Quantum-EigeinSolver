@@ -1,0 +1,11 @@
+#!/bin/sh
+
+#SBATCH --job-name=S3_t60949
+#SBATCH --partition=large
+#SBATCH --ntasks=88
+#SBATCH --nodes=4
+#SBATCH --tasks-per-node=22
+#SBATCH --output=%x.%j.out
+#SBATCH --error=%x.%j.err
+
+module load mkl mpi

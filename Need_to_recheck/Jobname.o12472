@@ -1,0 +1,9 @@
+Load Intel OneAPI HPC 2021.4.0
+Traceback (most recent call last):
+  File "/home/duynv/NGUYEN_VU_LINH/Final run/run_VQE_modified_on_HPC_sample.py", line 136, in <module>
+    main()
+  File "/home/duynv/NGUYEN_VU_LINH/Final run/run_VQE_modified_on_HPC_sample.py", line 101, in main
+    energy = Customize_Finite_Difference(hamiltonian, initial_point, eta, ansatz, interation, shots, callback, sampler)
+  File "/home/duynv/NGUYEN_VU_LINH/Final run/CoreVQEModified.py", line 424, in Customize_Finite_Difference
+    internal_initial_point =  np.subtract(internal_initial_point, grad)
+NameError: name 'grad' is not defined. Did you mean: 'grad1'?
