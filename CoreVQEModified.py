@@ -16,14 +16,14 @@ import time
 from qiskit.primitives  import Sampler
 sampler = Sampler()
 
-# def mini_derivate(param):
-#     theta_position, h, divide, initial_point, operator, ansatz, shots, sampler = param
-#     plus_parameter = initial_point.copy()
-#     plus_parameter[theta_position] += h
-#     minus_parameter = initial_point.copy()
-#     minus_parameter[theta_position] -= h
-#     result = (Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: plus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler) - Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: minus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler))/(2*divide)
-#     return result
+def mini_derivate(param):
+    theta_position, h, divide, initial_point, operator, ansatz, shots, sampler = param
+    plus_parameter = initial_point.copy()
+    plus_parameter[theta_position] += h
+    minus_parameter = initial_point.copy()
+    minus_parameter[theta_position] -= h
+    result = (Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: plus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler) - Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: minus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler))/(2*divide)
+    return result
 
 def SwapTest(circ1, circ2):
     """
@@ -40,7 +40,7 @@ def SwapTest(circ1, circ2):
     
     result = result['0'*qc.num_qubits] if '0'*qc.num_qubits in result.keys() else 0
     
-    return result, qc
+    return result
     
 # def SwapTest(circ1, circ2):
 #     """
@@ -371,25 +371,22 @@ def Customize_Parameter_Shift_Rule(operator, initial_point, learning_rate, ansat
         if callback is not None:
             callback(internal_initial_point, internal_energy)
 
-        grad = np.zeros(ansatz.num_parameters)      
-        for i in range(ansatz.num_parameters):
-            plus_parameter = internal_initial_point.copy()
-            plus_parameter[i] += np.pi/2
-            minus_parameter = internal_initial_point.copy()
-            minus_parameter[i] -= np.pi/2
-            grad[i] = (learning_rate)*(Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: plus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler) - Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: minus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler))/2
-        
-        
-        # Parallel
-        # params = []
-        # grad = np.zeros(ansatz.num_parameters)
-
+        # grad = np.zeros(ansatz.num_parameters)      
         # for i in range(ansatz.num_parameters):
-        #     params.append((i, np.pi/2, 1, internal_initial_point, operator, ansatz, shots, sampler))
+        #     plus_parameter = internal_initial_point.copy()
+        #     plus_parameter[i] += np.pi/2
+        #     minus_parameter = internal_initial_point.copy()
+        #     minus_parameter[i] -= np.pi/2
+        #     grad[i] = (learning_rate)*(Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: plus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler) - Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: minus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler))/2
+        params = []
+        grad = np.zeros(ansatz.num_parameters)
 
-        # import concurrent.futures
-        # executor = concurrent.futures.ProcessPoolExecutor()
-        # grad = list(executor.map(mini_derivate, params))
+        for i in range(ansatz.num_parameters):
+            params.append((i, np.pi/2, 1, internal_initial_point, operator, ansatz, shots, sampler))
+
+        import concurrent.futures
+        executor = concurrent.futures.ProcessPoolExecutor()
+        grad = list(executor.map(mini_derivate, params))
 
         internal_initial_point =  np.subtract(internal_initial_point, learning_rate*grad)
     
@@ -595,25 +592,25 @@ def Customize_Quantum_Natural_Gradient_Descent(operator, initial_point, learning
 
     
         # Exact Gradient of the cost function
-        grad = np.zeros(ansatz.num_parameters)
-        for i in range(ansatz.num_parameters):
-            plus_parameter = internal_initial_point.copy()
-            plus_parameter[i] += np.pi/2
-            minus_parameter = internal_initial_point.copy()
-            minus_parameter[i] -= np.pi/2
-            grad[i] = (Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: plus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler) - Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: minus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler))/2
+        # grad = np.zeros(ansatz.num_parameters)
+        # for i in range(ansatz.num_parameters):
+        #     plus_parameter = internal_initial_point.copy()
+        #     plus_parameter[i] += np.pi/2
+        #     minus_parameter = internal_initial_point.copy()
+        #     minus_parameter[i] -= np.pi/2
+        #     grad[i] = (Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: plus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler) - Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: minus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler))/2
 
     
-        # params = []
-        # grad = np.zeros(ansatz.num_parameters)
+        params = []
+        grad = np.zeros(ansatz.num_parameters)
 
-        # for i in range(ansatz.num_parameters):
-        #     params.append((i, np.pi/2, 1, internal_initial_point, operator, ansatz, shots, sampler))
+        for i in range(ansatz.num_parameters):
+            params.append((i, np.pi/2, 1, internal_initial_point, operator, ansatz, shots, sampler))
 
 
-        # import concurrent.futures
-        # executor = concurrent.futures.ProcessPoolExecutor()
-        # grad = list(executor.map(mini_derivate, params))
+        import concurrent.futures
+        executor = concurrent.futures.ProcessPoolExecutor()
+        grad = list(executor.map(mini_derivate, params))
 
 
         #print(fubini_study_metric)
@@ -707,23 +704,22 @@ def Customize_QNSPSA_PRS_blocking(operator, initial_point, learning_rate, ansatz
     for k in range(interation-1):   
         next_energy = 0
 
-        gradPRS = np.zeros(ansatz.num_parameters)
-        for i in range(ansatz.num_parameters):
-            plus_parameter = internal_initial_point.copy()
-            plus_parameter[i] += np.pi/2
-            minus_parameter = internal_initial_point.copy()
-            minus_parameter[i] -= np.pi/2
-            gradPRS[i] = (Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: plus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler) - Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: minus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler))/2
-        
-        # params = []
         # gradPRS = np.zeros(ansatz.num_parameters)
-
         # for i in range(ansatz.num_parameters):
-        #     params.append((i, np.pi/2, 1, internal_initial_point, operator, ansatz, shots, sampler))
+        #     plus_parameter = internal_initial_point.copy()
+        #     plus_parameter[i] += np.pi/2
+        #     minus_parameter = internal_initial_point.copy()
+        #     minus_parameter[i] -= np.pi/2
+        #     gradPRS[i] = (Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: plus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler) - Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: minus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler))/2
+        params = []
+        gradPRS = np.zeros(ansatz.num_parameters)
 
-        # import concurrent.futures
-        # executor = concurrent.futures.ProcessPoolExecutor()
-        # gradPRS = list(executor.map(mini_derivate, params))
+        for i in range(ansatz.num_parameters):
+            params.append((i, np.pi/2, 1, internal_initial_point, operator, ansatz, shots, sampler))
+
+        import concurrent.futures
+        executor = concurrent.futures.ProcessPoolExecutor()
+        gradPRS = list(executor.map(mini_derivate, params))
 
         # print('gradPRS: ', gradPRS)
 
@@ -747,7 +743,7 @@ def Customize_QNSPSA_PRS_blocking(operator, initial_point, learning_rate, ansatz
             ansatz_minus1_plus2 = ansatz.bind_parameters({theta: initial_minus1_plus2[k] for k, theta in enumerate(ansatz.parameters)})  
             ansatz_minus1 =  ansatz.bind_parameters({theta: initial_minus1[k] for k, theta in enumerate(ansatz.parameters)})  
 
-            deltaF = SwapTest(ansatz_initial, ansatz_plus1_plus2)[0] - SwapTest(ansatz_initial, ansatz_plus1)[0] - SwapTest(ansatz_initial, ansatz_minus1_plus2)[0] + SwapTest(ansatz_initial, ansatz_minus1)[0]
+            deltaF = SwapTest(ansatz_initial, ansatz_plus1_plus2) - SwapTest(ansatz_initial, ansatz_plus1) - SwapTest(ansatz_initial, ansatz_minus1_plus2) + SwapTest(ansatz_initial, ansatz_minus1)
 
 
             # print(deltaF)
@@ -1042,7 +1038,7 @@ def Customize_QNSPSA_SPSA_blocking(operator, initial_point, learning_rate, ansat
             ansatz_minus1_plus2 = ansatz.bind_parameters({theta: initial_minus1_plus2[k] for k, theta in enumerate(ansatz.parameters)})  
             ansatz_minus1 =  ansatz.bind_parameters({theta: initial_minus1[k] for k, theta in enumerate(ansatz.parameters)})  
 
-            deltaF = SwapTest(ansatz_initial, ansatz_plus1_plus2)[0] - SwapTest(ansatz_initial, ansatz_plus1)[0] -SwapTest(ansatz_initial, ansatz_minus1_plus2)[0] + SwapTest(ansatz_initial, ansatz_minus1)[0]
+            deltaF = SwapTest(ansatz_initial, ansatz_plus1_plus2) - SwapTest(ansatz_initial, ansatz_plus1) -SwapTest(ansatz_initial, ansatz_minus1_plus2) + SwapTest(ansatz_initial, ansatz_minus1)
 
 
             # print(deltaF)

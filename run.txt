@@ -1,11 +1,15 @@
 #!/bin/sh
 
-#SBATCH --job-name=S3_t60949
-#SBATCH --partition=large
-#SBATCH --ntasks=88
+#SBATCH --job-name=VQE_Ising
+#SBATCH --partition=small
+#SBATCH --ntasks=8
 #SBATCH --nodes=4
-#SBATCH --tasks-per-node=22
-#SBATCH --output=%x.%j.out
-#SBATCH --error=%x.%j.err
+#SBATCH --tasks-per-node=2
+#SBATCH --cpus-per-task 16
+#SBATCH --output=/home/ctv.linnv/out/%x.%j.out
+#SBATCH --error=/home/ctv.linnv/err/%x.%j.err
 
-module load mkl mpi
+module load python/anaconda3
+
+python run_VQE_modified_on_HPC_sample.py
+
