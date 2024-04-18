@@ -14,6 +14,9 @@ from qiskit.circuit import Parameter
 import multiprocessing 
 import time
 from qiskit.primitives  import Sampler
+
+from qiskit.primitives import Estimator, Sampler, BaseEstimator, BackendEstimator
+
 sampler = Sampler()
 
 def mini_derivate(param):
@@ -122,82 +125,84 @@ def Ising_hamiltonian(num_qubits, J, h):
 
     return hamiltonian.reduce()
 
+# def Transverse_Ising_Measurement(hamiltonian, quantum_circuit, shots, sampler):
+#     """
+#     hamiltonian: the Pauli matrix we want to measure for the Quantum Nature Gradient Descent with writing in this from (pauli_matrix+is_position). For exammple: (Z1Z2) or (X3)
+#     quantum_circuit: the circuit for measurement 
+#     shots: the number of shots that we want to execute, if we give the value to shot we will change from statevector_simulator to qasm_simulator
+#     """
+#     number_of_qubits = quantum_circuit.num_qubits
+
+#     # if len(hamiltonian) > (number_of_qubits):
+#     #     raise Exception("The position of Pauli matrix exceeds the number of qubits")
+
+#     Z_list = {}
+#     X_list = {}
+
+#     for i in range(len(hamiltonian)):
+#         if str(hamiltonian.primitive._pauli_list[i]).__contains__('Z'):
+#             Z_list[str(hamiltonian.primitive._pauli_list[i])] = hamiltonian.coeffs.real[i]
+#         if str(hamiltonian.primitive._pauli_list[i]).__contains__('X'):
+#             X_list[str(hamiltonian.primitive._pauli_list[i])] = hamiltonian.coeffs.real[i]    
+
+
+    
+#     expectation_value_z = 0
+#     quantum_circuit_z = quantum_circuit.copy()
+#     quantum_circuit_z.measure_all()
+
+#     job_z = sampler.run(quantum_circuit_z, shots = shots)
+
+#     result_z = (job_z.result().quasi_dists[0].binary_probabilities())
+
+#     # print(Z_list)
+
+#     for k in range(len(Z_list)):
+#         position_of_non_I_gate = np.where(np.array(list(str(list(Z_list.keys())[k]))) != 'I')[0]
+#         # print(list(Z_list.keys())[k])
+#         # print((list(Z_list.keys()))[k])
+#         # print(position_of_non_I_gate)
+#         for i in range(len(result_z)):
+#             extra_minus = 1
+#             # print( (list(result_z.keys()))[i])
+#             for j in range(len(position_of_non_I_gate)):
+#                 if (list(result_z.keys()))[i][number_of_qubits - position_of_non_I_gate[j]-1] == '1':
+#                     extra_minus *= -1
+#             expectation_value_z += result_z[list(result_z.keys())[i]]*extra_minus*list(Z_list.values())[k]
+
+#     quantum_circuit_x_to_meausurement = QuantumCircuit(quantum_circuit.num_qubits)
+#     quantum_circuit_x_to_meausurement.h(i for i in range(quantum_circuit.num_qubits))
+
+#     expectation_value_x = 0
+#     quantum_circuit_x = quantum_circuit.compose(quantum_circuit_x_to_meausurement)
+#     quantum_circuit_x.measure_all()
+
+#     # print(quantum_circuit_x)
+    
+
+#     job_x = sampler.run(quantum_circuit_x, shots = shots)
+
+#     result_x = (job_x.result().quasi_dists[0].binary_probabilities())
+
+
+
+#     for k in range(len(X_list)):
+#         position_of_non_I_gate = np.where(np.array(list(str(list(X_list.keys())[k]))) != 'I')[0]
+#         # print(list(X_list.keys())[k])
+#         # print((list(Z_list.keys()))[k])
+#         # print(position_of_non_I_gate)
+#         for i in range(len(result_x)):
+#             extra_minus = 1
+#             # print( (list(result_x.keys()))[i])
+#             for j in range(len(position_of_non_I_gate)):
+#                 if (list(result_x.keys()))[i][number_of_qubits - position_of_non_I_gate[j]-1] == '1':
+#                     extra_minus *= -1
+#             expectation_value_x += result_x[list(result_x.keys())[i]]*extra_minus*list(X_list.values())[k]
+
+#     return expectation_value_z + expectation_value_x
+
 def Transverse_Ising_Measurement(hamiltonian, quantum_circuit, shots, sampler):
-    """
-    hamiltonian: the Pauli matrix we want to measure for the Quantum Nature Gradient Descent with writing in this from (pauli_matrix+is_position). For exammple: (Z1Z2) or (X3)
-    quantum_circuit: the circuit for measurement 
-    shots: the number of shots that we want to execute, if we give the value to shot we will change from statevector_simulator to qasm_simulator
-    """
-    number_of_qubits = quantum_circuit.num_qubits
-
-    # if len(hamiltonian) > (number_of_qubits):
-    #     raise Exception("The position of Pauli matrix exceeds the number of qubits")
-
-    Z_list = {}
-    X_list = {}
-
-    for i in range(len(hamiltonian)):
-        if str(hamiltonian.primitive._pauli_list[i]).__contains__('Z'):
-            Z_list[str(hamiltonian.primitive._pauli_list[i])] = hamiltonian.coeffs.real[i]
-        if str(hamiltonian.primitive._pauli_list[i]).__contains__('X'):
-            X_list[str(hamiltonian.primitive._pauli_list[i])] = hamiltonian.coeffs.real[i]    
-
-
-    
-    expectation_value_z = 0
-    quantum_circuit_z = quantum_circuit.copy()
-    quantum_circuit_z.measure_all()
-
-    job_z = sampler.run(quantum_circuit_z, shots = shots)
-
-    result_z = (job_z.result().quasi_dists[0].binary_probabilities())
-
-    # print(Z_list)
-
-    for k in range(len(Z_list)):
-        position_of_non_I_gate = np.where(np.array(list(str(list(Z_list.keys())[k]))) != 'I')[0]
-        # print(list(Z_list.keys())[k])
-        # print((list(Z_list.keys()))[k])
-        # print(position_of_non_I_gate)
-        for i in range(len(result_z)):
-            extra_minus = 1
-            # print( (list(result_z.keys()))[i])
-            for j in range(len(position_of_non_I_gate)):
-                if (list(result_z.keys()))[i][number_of_qubits - position_of_non_I_gate[j]-1] == '1':
-                    extra_minus *= -1
-            expectation_value_z += result_z[list(result_z.keys())[i]]*extra_minus*list(Z_list.values())[k]
-
-    quantum_circuit_x_to_meausurement = QuantumCircuit(quantum_circuit.num_qubits)
-    quantum_circuit_x_to_meausurement.h(i for i in range(quantum_circuit.num_qubits))
-
-    expectation_value_x = 0
-    quantum_circuit_x = quantum_circuit.compose(quantum_circuit_x_to_meausurement)
-    quantum_circuit_x.measure_all()
-
-    # print(quantum_circuit_x)
-    
-
-    job_x = sampler.run(quantum_circuit_x, shots = shots)
-
-    result_x = (job_x.result().quasi_dists[0].binary_probabilities())
-
-
-
-    for k in range(len(X_list)):
-        position_of_non_I_gate = np.where(np.array(list(str(list(X_list.keys())[k]))) != 'I')[0]
-        # print(list(X_list.keys())[k])
-        # print((list(Z_list.keys()))[k])
-        # print(position_of_non_I_gate)
-        for i in range(len(result_x)):
-            extra_minus = 1
-            # print( (list(result_x.keys()))[i])
-            for j in range(len(position_of_non_I_gate)):
-                if (list(result_x.keys()))[i][number_of_qubits - position_of_non_I_gate[j]-1] == '1':
-                    extra_minus *= -1
-            expectation_value_x += result_x[list(result_x.keys())[i]]*extra_minus*list(X_list.values())[k]
-
-    return expectation_value_z + expectation_value_x
-
+    return Estimator().run(quantum_circuit, hamiltonian).result().values[0]
 
 def Customize_EfficientSU2(number_qubits, number_of_subcircuit):
     """
@@ -362,14 +367,6 @@ def Customize_Parameter_Shift_Rule(operator, initial_point, learning_rate, ansat
 
     for i in range(interation):
         internal_ansatz = ansatz.bind_parameters({theta: internal_initial_point[k] for k, theta in enumerate(ansatz.parameters)})       
-        # Measure the expectation of our hamiltonian
-        internal_energy = Transverse_Ising_Measurement(operator, internal_ansatz, shots, sampler)
-        energy.append(internal_energy)
-        #print(internal_energy)
-        #print(f'{internal_initial_point} ---------')
-
-        if callback is not None:
-            callback(internal_initial_point, internal_energy)
 
         # grad = np.zeros(ansatz.num_parameters)      
         # for i in range(ansatz.num_parameters):
@@ -389,6 +386,15 @@ def Customize_Parameter_Shift_Rule(operator, initial_point, learning_rate, ansat
         grad = list(executor.map(mini_derivate, params))
 
         internal_initial_point =  np.subtract(internal_initial_point, learning_rate*grad)
+
+        # Measure the expectation of our hamiltonian
+        internal_energy = Transverse_Ising_Measurement(operator, internal_ansatz, shots, sampler)
+        energy.append(internal_energy)
+        #print(internal_energy)
+        #print(f'{internal_initial_point} ---------')
+
+        if callback is not None:
+            callback(internal_initial_point, internal_energy)
     
     if callback is None:
         return energy
@@ -410,15 +416,6 @@ def Customize_Finite_Difference(operator, initial_point, learning_rate, ansatz, 
 
     for i in range(interation):
         internal_ansatz = ansatz.bind_parameters({theta: internal_initial_point[k] for k, theta in enumerate(ansatz.parameters)})       
-        # Measure the expectation of our hamiltonian
-        internal_energy = Transverse_Ising_Measurement(operator, internal_ansatz, shots, sampler)
-        energy.append(internal_energy)
-        #print(internal_energy)
-        #print(f'{internal_initial_point} ---------')
-
-        if callback is not None:
-            callback(internal_initial_point, internal_energy)
-
         
         params = []
         grad = np.zeros(ansatz.num_parameters)
@@ -431,7 +428,16 @@ def Customize_Finite_Difference(operator, initial_point, learning_rate, ansatz, 
         grad = list(executor.map(mini_derivate, params))
 
         internal_initial_point =  np.subtract(internal_initial_point, learning_rate*grad)
-    
+        
+        # Measure the expectation of our hamiltonian
+        internal_energy = Transverse_Ising_Measurement(operator, internal_ansatz, shots, sampler)
+        energy.append(internal_energy)
+        #print(internal_energy)
+        #print(f'{internal_initial_point} ---------')
+
+        if callback is not None:
+            callback(internal_initial_point, internal_energy)
+
     if callback is None:
         return energy
 
@@ -498,16 +504,6 @@ def Customize_Quantum_Natural_Gradient_Descent(operator, initial_point, learning
 
     for i in range(interation):
         internal_ansatz = ansatz.bind_parameters({theta: internal_initial_point[k] for k, theta in enumerate(ansatz.parameters)})       
-        # Measure the expectation of our hamiltonian
-        internal_energy = Transverse_Ising_Measurement(operator, internal_ansatz, shots, sampler)
-        energy.append(internal_energy)
-        #print(internal_energy)
-        #print(f'{internal_initial_point} ---------')
-
-        if callback is not None:
-            callback(internal_initial_point, internal_energy)
-
-
         fubini_study_metric = np.zeros((ansatz.num_parameters, ansatz.num_parameters))
         # Measure the fubini-study metric
         for i in range(len(super_circuit)):
@@ -622,6 +618,15 @@ def Customize_Quantum_Natural_Gradient_Descent(operator, initial_point, learning
 
         internal_initial_point =  np.subtract(internal_initial_point, combine)
     
+        # Measure the expectation of our hamiltonian
+        internal_energy = Transverse_Ising_Measurement(operator, internal_ansatz, shots, sampler)
+        energy.append(internal_energy)
+        #print(internal_energy)
+        #print(f'{internal_initial_point} ---------')
+
+        if callback is not None:
+            callback(internal_initial_point, internal_energy)
+    
     if callback is None:
         return energy
 
@@ -642,10 +647,7 @@ def Customize_SPSA(operator, initial_point, learning_rate, ansatz, interation, s
         internal_energy =  Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: internal_initial_point[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler)
         #print(f'{internal_initial_point} ---------')
         #print(internal_energy)
-        energy.append(internal_energy)
         
-        if callback is not None:
-            callback(internal_initial_point, internal_energy)
 
         # Optimization part
         grad = np.zeros(ansatz.num_parameters)
@@ -666,12 +668,17 @@ def Customize_SPSA(operator, initial_point, learning_rate, ansatz, interation, s
         grad = np.add(grad, grad_func*random)
 
         internal_initial_point = np.subtract(internal_initial_point, grad)
+
+        energy.append(internal_energy)
+        
+        if callback is not None:
+            callback(internal_initial_point, internal_energy)
     
     return energy
 
 
 
-def Customize_QNSPSA_PRS_blocking(operator, initial_point, learning_rate, ansatz, interation, shots, callback, sampler):
+def Customize_QNSPSA_PRS_blocking(operator, initial_point, learning_rate, ansatz, interation, step, shots, callback, sampler, previous_fubini_matrix):
     """
     operator: The pauli operator
     interation: number of interation
@@ -689,19 +696,16 @@ def Customize_QNSPSA_PRS_blocking(operator, initial_point, learning_rate, ansatz
 
     energy = []
 
-    regularized_fubini_matrix_previous = np.zeros((ansatz.num_parameters, ansatz.num_parameters))
+    regularized_fubini_matrix_previous = previous_fubini_matrix.copy()
     grad = np.zeros(ansatz.num_parameters)
-    # first measurement outside
-    internal_energy = Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: internal_initial_point[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler)
-    energy.append(internal_energy)
-    #print(internal_energy)
-    #print(f'{internal_initial_point} ---------')
-    if callback is not None:
-        callback(internal_initial_point, internal_energy)
     
+    internal_energy = Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: internal_initial_point[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler)
     last_n_steps[0] = internal_energy
-
-    for k in range(interation-1):   
+    print(last_n_steps)
+  
+    for k in range(interation):
+        print(last_n_steps)  
+        k += step 
         next_energy = 0
 
         # gradPRS = np.zeros(ansatz.num_parameters)
@@ -730,8 +734,8 @@ def Customize_QNSPSA_PRS_blocking(operator, initial_point, learning_rate, ansatz
             # Natural Gradient Part
             random1 = np.array([np.random.choice([-1,1]) for _ in range(ansatz.num_parameters)])
             random2 = np.array([np.random.choice([-1,1]) for _ in range(ansatz.num_parameters)])
-            # random1 = np.array([1.0 for _ in range(ansatz.num_parameters)])
-            # random2 = np.array([-1.0 for _ in range(ansatz.num_parameters)])
+            #random1 = np.array([1.0 for _ in range(ansatz.num_parameters)])
+            #random2 = np.array([-1.0 for _ in range(ansatz.num_parameters)])
             initial_plus1_plus2 = np.add(internal_initial_point, np.add(ck*random1, ck*random2))
             initial_plus1 = np.add(internal_initial_point, ck*random1)
             initial_minus1_plus2 = np.subtract(internal_initial_point, np.subtract(ck*random1, ck*random2))
@@ -768,7 +772,7 @@ def Customize_QNSPSA_PRS_blocking(operator, initial_point, learning_rate, ansatz
 
             #print(f'tolerance: {tolerance}')
             # print('gradPRS: ', gradPRS)
-            #print(next_energy)
+            print(next_energy)
 
             if next_energy <= internal_energy + tolerance:
                 break
@@ -789,13 +793,139 @@ def Customize_QNSPSA_PRS_blocking(operator, initial_point, learning_rate, ansatz
         # print(f'regularized_fubini_matrix: {np.linalg.pinv(regularized_fubini_matrix)}')
 
         if callback is not None:
-            callback(internal_initial_point, internal_energy)
+            callback(internal_initial_point, internal_energy, regularized_fubini_matrix_previous)
 
         last_n_steps[(k+1) % history_length] = internal_energy
     return energy
 
 
-def Customize_QN_SPSA_blocking(operator, initial_point, learning_rate, ansatz, interation, shots, callback, sampler):
+def Customize_QNSPSA_PRS_blocking_MonteCarlo(operator, initial_point, learning_rate, ansatz, interation, step, shots, callback, sampler, previous_fubini_matrix):
+    """
+    operator: The pauli operator
+    interation: number of interation
+    initial_point: the initial point that we will update until we end up with the desired point
+    ansatz: the parameterized circuit that we want to update 
+    """
+
+    beta = 0.001
+
+    internal_initial_point = initial_point.copy()
+
+    history_length = 5
+
+    last_n_steps = np.zeros(history_length)
+
+    energy = []
+
+    regularized_fubini_matrix_previous = previous_fubini_matrix.copy()
+    grad = np.zeros(ansatz.num_parameters)
+    
+    internal_energy = Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: internal_initial_point[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler)
+    last_n_steps[0] = internal_energy
+    #print(last_n_steps)
+    #print(internal_energy)
+    for k in range(interation):
+        print(last_n_steps)  
+        k += step 
+        next_energy = 0
+
+        # gradPRS = np.zeros(ansatz.num_parameters)
+        # for i in range(ansatz.num_parameters):
+        #     plus_parameter = internal_initial_point.copy()
+        #     plus_parameter[i] += np.pi/2
+        #     minus_parameter = internal_initial_point.copy()
+        #     minus_parameter[i] -= np.pi/2
+        #     gradPRS[i] = (Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: plus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler) - Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: minus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler))/2
+        params = []
+        gradPRS = np.zeros(ansatz.num_parameters)
+
+        for i in range(ansatz.num_parameters):
+            params.append((i, np.pi/2, 1, internal_initial_point, operator, ansatz, shots, sampler))
+
+        import concurrent.futures
+        executor = concurrent.futures.ProcessPoolExecutor()
+        gradPRS = list(executor.map(mini_derivate, params))
+
+        # print('gradPRS: ', gradPRS)
+        
+        monte_carlo_matrix = []
+        
+        while True:
+            print(k)
+            print("True")  
+            grad = np.zeros(ansatz.num_parameters)
+            ck = 0.01
+            ak = learning_rate
+            # Natural Gradient Part
+            random1 = np.array([np.random.choice([-1,1]) for _ in range(ansatz.num_parameters)])
+            random2 = np.array([np.random.choice([-1,1]) for _ in range(ansatz.num_parameters)])
+            #random1 = np.array([1.0 for _ in range(ansatz.num_parameters)])
+            #random2 = np.array([-1.0 for _ in range(ansatz.num_parameters)])
+            initial_plus1_plus2 = np.add(internal_initial_point, np.add(ck*random1, ck*random2))
+            initial_plus1 = np.add(internal_initial_point, ck*random1)
+            initial_minus1_plus2 = np.subtract(internal_initial_point, np.subtract(ck*random1, ck*random2))
+            initial_minus1 = np.subtract(internal_initial_point, ck*random1)
+
+            ansatz_initial = ansatz.bind_parameters({theta: internal_initial_point[k] for k, theta in enumerate(ansatz.parameters)})  
+            ansatz_plus1_plus2 = ansatz.bind_parameters({theta: initial_plus1_plus2[k] for k, theta in enumerate(ansatz.parameters)})  
+            ansatz_plus1 = ansatz.bind_parameters({theta: initial_plus1[k] for k, theta in enumerate(ansatz.parameters)})  
+            ansatz_minus1_plus2 = ansatz.bind_parameters({theta: initial_minus1_plus2[k] for k, theta in enumerate(ansatz.parameters)})  
+            ansatz_minus1 =  ansatz.bind_parameters({theta: initial_minus1[k] for k, theta in enumerate(ansatz.parameters)})  
+
+            deltaF = SwapTest(ansatz_initial, ansatz_plus1_plus2) - SwapTest(ansatz_initial, ansatz_plus1) - SwapTest(ansatz_initial, ansatz_minus1_plus2) + SwapTest(ansatz_initial, ansatz_minus1)
+
+
+            # print(deltaF)
+            # Fubini_matrix
+            fubini_matrix = -1/2*(deltaF/(2*ck**2))*(np.array(np.array([random1]).T*random2) + np.array(np.array([random2]).T*random1))/2
+            
+            monte_carlo_matrix.append(fubini_matrix.copy())
+
+            # Data of previous regularized study metric
+            exponentially_smoothed_fubini = k/(k+1)*regularized_fubini_matrix_previous + 1/(k+1)*np.array(np.mean(monte_carlo_matrix, axis=0))    
+            regularized_fubini_matrix = np.add(matrix_power(np.dot(exponentially_smoothed_fubini,exponentially_smoothed_fubini), 1/2).real, beta*np.identity(ansatz.num_parameters))
+
+            # regularized_fubini_matrix_previous = regularized_fubini_matrix.copy()
+
+            grad = ak*np.linalg.pinv(regularized_fubini_matrix).dot(gradPRS)
+
+            
+            # cập nhật tham số
+            internal_initial_point_while = np.subtract(internal_initial_point, grad)
+            tolerance = 2 * last_n_steps.std() if (k > history_length) else 2 * last_n_steps[:k+1].std()
+            next_energy = Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: internal_initial_point_while[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler)
+
+            #print(f'tolerance: {tolerance}')
+            # print('gradPRS: ', gradPRS)
+            print(next_energy)
+
+            if next_energy <= internal_energy + tolerance:
+                break
+
+            # if True:
+                # break            
+
+        
+        regularized_fubini_matrix_previous = regularized_fubini_matrix.copy()
+        
+        # ghi data
+        internal_initial_point = np.subtract(internal_initial_point, grad)
+        internal_energy = Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: internal_initial_point[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler)
+        energy.append(internal_energy)
+        #print(internal_energy)
+        #print(f'{internal_initial_point} ---------')
+        # print(f'gradSPSA {gradSPSA}')
+        # print(f'regularized_fubini_matrix: {np.linalg.pinv(regularized_fubini_matrix)}')
+
+        if callback is not None:
+            callback(internal_initial_point, internal_energy, regularized_fubini_matrix_previous)
+
+        last_n_steps[(k+1) % history_length] = internal_energy
+    return energy
+    
+
+
+def Customize_QN_SPSA_blocking(operator, initial_point, learning_rate, ansatz, interation, step, shots, callback, sampler, previous_fubini_matrix):
     """
     operator: The pauli operator
     interation: number of interation
@@ -817,19 +947,14 @@ def Customize_QN_SPSA_blocking(operator, initial_point, learning_rate, ansatz, i
 
     super_circuit = Separate_Circuit_Apart(ansatz)
 
-    regularized_fubini_matrix_previous = np.zeros((ansatz.num_parameters, ansatz.num_parameters))
+    regularized_fubini_matrix_previous = previous_fubini_matrix.copy()
     grad = np.zeros(ansatz.num_parameters)
-    # first measurement outside
+
     internal_energy = Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: internal_initial_point[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler)
-    energy.append(internal_energy)
-    #print(internal_energy)
-    #print(f'{internal_initial_point} ---------')
-    if callback is not None:
-        callback(internal_initial_point, internal_energy)
-    
     last_n_steps[0] = internal_energy
 
-    for k in range(interation-1):   
+    for k in range(interation): 
+        k += step  
         next_energy = 0
         fubini_study_metric = np.zeros((ansatz.num_parameters, ansatz.num_parameters))
 
@@ -965,12 +1090,12 @@ def Customize_QN_SPSA_blocking(operator, initial_point, learning_rate, ansatz, i
         # print(f'regularized_fubini_matrix: {np.linalg.pinv(regularized_fubini_matrix)}')
 
         if callback is not None:
-            callback(internal_initial_point, internal_energy)
+            callback(internal_initial_point, internal_energy, regularized_fubini_matrix_previous)
 
         last_n_steps[(k+1) % history_length] = internal_energy
     return energy
 
-def Customize_QNSPSA_SPSA_blocking(operator, initial_point, learning_rate, ansatz, interation, shots, callback, sampler):
+def Customize_QNSPSA_SPSA_blocking(operator, initial_point, learning_rate, ansatz, interation, step, shots, callback, sampler, previous_fubini_matrix):
     """
     operator: The pauli operator
     interation: number of interation
@@ -988,19 +1113,14 @@ def Customize_QNSPSA_SPSA_blocking(operator, initial_point, learning_rate, ansat
 
     energy = []
 
-    regularized_fubini_matrix_previous = np.zeros((ansatz.num_parameters, ansatz.num_parameters))
+    regularized_fubini_matrix_previous = previous_fubini_matrix.copy()
     grad = np.zeros(ansatz.num_parameters)
-    # first measurement outside
-    internal_energy = Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: internal_initial_point[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler)
-    energy.append(internal_energy)
-    #print(internal_energy)
-    #print(f'{internal_initial_point} ---------')
-    if callback is not None:
-        callback(internal_initial_point, internal_energy)
     
+    internal_energy = Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: internal_initial_point[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler)
     last_n_steps[0] = internal_energy
 
-    for k in range(interation-1):   
+    for k in range(interation):   
+        k += step
         next_energy = 0
         
         while True:    
@@ -1079,13 +1199,13 @@ def Customize_QNSPSA_SPSA_blocking(operator, initial_point, learning_rate, ansat
         # print(f'regularized_fubini_matrix: {np.linalg.pinv(regularized_fubini_matrix)}')
 
         if callback is not None:
-            callback(internal_initial_point, internal_energy)
+            callback(internal_initial_point, internal_energy, regularized_fubini_matrix_previous)
 
         last_n_steps[(k+1) % history_length] = internal_energy
     return energy
-
-
-def Customize_HESPSA_SPSA_blocking(operator, initial_point, learning_rate, ansatz, interation, shots, callback, sampler):
+    
+    
+def Customize_QNSPSA_SPSA_MonteCarlo(operator, initial_point, learning_rate, ansatz, interation, step, shots, callback, sampler, previous_fubini_matrix):
     """
     operator: The pauli operator
     interation: number of interation
@@ -1103,21 +1223,19 @@ def Customize_HESPSA_SPSA_blocking(operator, initial_point, learning_rate, ansat
 
     energy = []
 
-    regularized_fubini_matrix_previous = np.zeros((ansatz.num_parameters, ansatz.num_parameters))
+    regularized_fubini_matrix_previous = previous_fubini_matrix.copy()
     grad = np.zeros(ansatz.num_parameters)
-    # first measurement outside
-    internal_energy = Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: internal_initial_point[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler)
-    energy.append(internal_energy)
-    print(internal_energy)
-    print(f'{internal_initial_point} ---------')
-    if callback is not None:
-        callback(internal_initial_point, internal_energy)
     
+    internal_energy = Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: internal_initial_point[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler)
     last_n_steps[0] = internal_energy
 
-    for k in range(interation-1):   
+    for k in range(interation):   
+        k += step
         next_energy = 0
-
+        
+        monte_carlo_matrix = []
+        monte_carlo_SPSA = []
+        
         while True:    
             grad = np.zeros(ansatz.num_parameters)
             # SPSA part
@@ -1127,16 +1245,16 @@ def Customize_HESPSA_SPSA_blocking(operator, initial_point, learning_rate, ansat
             ck = 0.01
             ak = learning_rate
             
-            # print(f'ak_{k}: {ak}')
-            # print(f'ck_{k}: {ck}')
-            
-            # SPSA
             random = np.array([np.random.choice([-1,1]) for _ in range(ansatz.num_parameters)])
             plus_parameter = np.array(internal_initial_point.copy())
             plus_parameter = np.add(plus_parameter,random*ck)
             minus_parameter = np.array(internal_initial_point.copy())
             minus_parameter = np.subtract(minus_parameter,random*ck)
             gradSPSA = (Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: plus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler) - Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: minus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler))/(2*(ck))*random
+            
+            monte_carlo_SPSA.append(gradSPSA.copy())
+            # print(f'gradSPSA {gradSPSA}')
+
             
             # Natural Gradient Part
             random1 = np.array([np.random.choice([-1,1]) for _ in range(ansatz.num_parameters)])
@@ -1154,20 +1272,22 @@ def Customize_HESPSA_SPSA_blocking(operator, initial_point, learning_rate, ansat
             ansatz_minus1_plus2 = ansatz.bind_parameters({theta: initial_minus1_plus2[k] for k, theta in enumerate(ansatz.parameters)})  
             ansatz_minus1 =  ansatz.bind_parameters({theta: initial_minus1[k] for k, theta in enumerate(ansatz.parameters)})  
 
-            deltaF = Transverse_Ising_Measurement(operator, ansatz_plus1_plus2, shots, sampler) - Transverse_Ising_Measurement(operator, ansatz_plus1, shots, sampler) - Transverse_Ising_Measurement(operator, ansatz_minus1_plus2, shots, sampler) + Transverse_Ising_Measurement(operator, ansatz_minus1, shots, sampler)
+            deltaF = SwapTest(ansatz_initial, ansatz_plus1_plus2) - SwapTest(ansatz_initial, ansatz_plus1) -SwapTest(ansatz_initial, ansatz_minus1_plus2) + SwapTest(ansatz_initial, ansatz_minus1)
 
 
             # print(deltaF)
             # Fubini_matrix
-            fubini_matrix = (deltaF/(4*ck**2))*(np.array(np.array([random1]).T*random2) + np.array(np.array([random2]).T*random1))
+            fubini_matrix = -1/2*(deltaF/(2*ck**2))*(np.array(np.array([random1]).T*random2) + np.array(np.array([random2]).T*random1))/2
+            
+            monte_carlo_matrix.append(fubini_matrix.copy())
             
             # Data of previous regularized study metric
-            exponentially_smoothed_fubini = k/(k+1)*regularized_fubini_matrix_previous + 1/(k+1)*fubini_matrix.copy()    
+            exponentially_smoothed_fubini = k/(k+1)*regularized_fubini_matrix_previous + 1/(k+1)*np.mean(monte_carlo_matrix, axis=0)
             regularized_fubini_matrix = np.add(matrix_power(np.dot(exponentially_smoothed_fubini,exponentially_smoothed_fubini), 1/2).real, beta*np.identity(ansatz.num_parameters))
 
             # regularized_fubini_matrix_previous = regularized_fubini_matrix.copy()
 
-            grad = ak*np.linalg.pinv(regularized_fubini_matrix).dot(gradSPSA)
+            grad = ak*np.linalg.pinv(regularized_fubini_matrix).dot(np.mean(monte_carlo_SPSA, axis=0))
 
             
             # cập nhật tham số
@@ -1182,9 +1302,6 @@ def Customize_HESPSA_SPSA_blocking(operator, initial_point, learning_rate, ansat
             if next_energy < internal_energy + tolerance:
                 break            
 
-            # if True:
-            #     break
-
         
         regularized_fubini_matrix_previous = regularized_fubini_matrix.copy()
         
@@ -1198,65 +1315,8 @@ def Customize_HESPSA_SPSA_blocking(operator, initial_point, learning_rate, ansat
         # print(f'regularized_fubini_matrix: {np.linalg.pinv(regularized_fubini_matrix)}')
 
         if callback is not None:
-            callback(internal_initial_point, internal_energy)
+            callback(internal_initial_point, internal_energy, regularized_fubini_matrix_previous)
 
         last_n_steps[(k+1) % history_length] = internal_energy
     return energy
-
-def Customize_HE_PRS(operator, initial_point, learning_rate, ansatz, interation, shots, callback, sampler):
-    """
-    operator: the pauli matrix
-    interation: number of interations 
-    ansatz: the ansatz for perparing the parameterized circuit
-    eta: learning rate
-    initial_points: random sample of number uses at the beggining of running
-    shots: number of shots
-    backend: the backend
-    """
-
-    energy = []
-
-    internal_initial_point = initial_point.copy()
-    # regularized_fubini_matrix_previous = np.zeros((ansatz.num_parameters, ansatz.num_parameters))
-
-    for k in range(interation):
-        print(f'{internal_initial_point} ---------')
-        internal_ansatz = ansatz.bind_parameters({theta: internal_initial_point[k] for k, theta in enumerate(ansatz.parameters)})       
-        # Measure the expectation of our hamiltonian
-        internal_energy = Transverse_Ising_Measurement(operator, internal_ansatz, shots, sampler)
-        
-        energy.append(internal_energy)
-        print(internal_energy)
-
-
-        if callback is not None:
-            callback(internal_initial_point, internal_energy)
-
-        # Update the parameter points
-        grad = np.zeros(ansatz.num_parameters)
-        Hessian_Matrix = np.zeros((ansatz.num_parameters, ansatz.num_parameters))
-
-        for i in range(ansatz.num_parameters):
-            plus_parameter = internal_initial_point.copy()
-            plus_parameter[i] += np.pi/2
-            minus_parameter = internal_initial_point.copy()
-            minus_parameter[i] -= np.pi/2
-            grad[i] = (Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: plus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler) - Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: minus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler))/2
-            Hessian_Matrix[i,i] = (Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: plus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler) + Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: minus_parameter[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler) - 2*internal_energy)/2
-        
-        # exponentially_smoothed_fubini = k/(k+1)*regularized_fubini_matrix_previous + 1/(k+1)*Hessian_Matrix.copy()    
-        # #     regularized_fubini_matrix = np.add(matrix_power(np.dot(exponentially_smoothed_fubini,exponentially_smoothed_fubini), 1/2).real, beta*np.identity(ansatz.num_parameters))
-
-        # regularized_fubini_matrix_previous = exponentially_smoothed_fubini.copy()
-
-        a = learning_rate*np.linalg.pinv(Hessian_Matrix).dot(grad)
-
-
-        internal_initial_point =  np.subtract(internal_initial_point,a)
-        # print(f'a: {a}')
-
-        # print(internal_energy)
-
-    if callback is None:
-        return energy
 

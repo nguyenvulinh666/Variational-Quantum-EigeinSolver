@@ -17,7 +17,10 @@ from CoreVQEModified import Ising_hamiltonian
 # import ansatz 
 from CoreVQEModified import Customize_RealAmplidues, Customize_EfficientSU2
 # import optimize
-from CoreVQEModified import Customize_Finite_Difference, Customize_Parameter_Shift_Rule, Customize_Quantum_Natural_Gradient_Descent, Customize_SPSA, Customize_QNSPSA_PRS_blocking, Customize_QN_SPSA_blocking, Customize_QNSPSA_SPSA_blocking, Customize_HESPSA_SPSA_blocking, Customize_HE_PRS
+from CoreVQEModified import Customize_Finite_Difference, Customize_Parameter_Shift_Rule, Customize_Quantum_Natural_Gradient_Descent, Customize_SPSA, Customize_QNSPSA_PRS_blocking, Customize_QN_SPSA_blocking, Customize_QNSPSA_SPSA_blocking
+
+# import measurement
+from CoreVQEModified import Transverse_Ising_Measurement
 
 from qiskit.primitives import Sampler
 
@@ -27,6 +30,9 @@ from qiskit.algorithms.optimizers import COBYLA
 from qiskit.providers.basicaer import StatevectorSimulatorPy  # local simulator
 from qiskit.algorithms import VQE
 
+import os
+
+from qiskit.primitives import Estimator, Sampler, BaseEstimator, BackendEstimator
 
 def main(params):
     num_qubits, h, optimize, run_time = params 
@@ -42,7 +48,8 @@ def main(params):
         'energy': [],
     }
 
-
+    
+    
     hamiltonian = Ising_hamiltonian(num_qubits, J, h)
     
     ansatz = Customize_RealAmplidues(num_qubits, reps)
@@ -52,7 +59,6 @@ def main(params):
     #ansatz_name = 'EffcientSU2'
 
     interation = 500
-    initial_point = np.zeros(ansatz.num_parameters) - 0.5
 
     eta = 0.01
     shots = None
@@ -61,16 +67,18 @@ def main(params):
     file_name_parameters = f'{str(optimize.__name__)} - LR {eta} - shots {shots} - interation {interation} - {ansatz_name}({num_qubits},{reps}) - J{J}h{h} - Parameters - {run_time+1}'
     file_name_energy = f'{str(optimize.__name__)} - LR {eta} - shots {shots} - interation {interation} - {ansatz_name}({num_qubits},{reps}) - J{J}h{h} - Energy - {run_time+1}'
 
-    file_parameters = open(f'{file_name_parameters}.txt', 'a+')
-    file_energy = open(f'{file_name_energy}.txt', 'a+')
+    if str(optimize.__name__)[:16] == 'Customize_QNSPSA':
+        file_name_fubini_matrix_previous = f'{str(optimize.__name__)} - LR {eta} - shots {shots} - interation {interation} - {ansatz_name}({num_qubits},{reps}) - J{J}h{h} - PreviousFubiniMatrix - {run_time+1}'
 
-    file_parameters.write('Parameters \n \n')
-    file_energy.write('Energy \n \n')
-
-    file_parameters.close()
-    file_energy.close()
-
-    def callback(parameters, energy):
+    
+    # Call back function
+    def callback(parameters, energy, fubini_matrix_previous=None):
+        if str(optimize.__name__)[:16] == 'Customize_QNSPSA':
+            #print(file_name_fubini_matrix_previous)
+            file_fubini_matrix_previous = open(f'{file_name_fubini_matrix_previous}.txt', "a+")
+            file_fubini_matrix_previous.write(f'{str((fubini_matrix_previous).tolist())} \n')
+            file_fubini_matrix_previous.close()
+        
         file_parameters = open(f'{file_name_parameters}.txt', 'a+')
         file_energy = open(f'{file_name_energy}.txt', 'a+')
 
@@ -79,12 +87,60 @@ def main(params):
 
         file_parameters.close()
         file_energy.close()
+   
+    file_length = 0
+    
+    # Initialized file
+    if os.path.isfile(f'{file_name_parameters}.txt'):
+        data_file_parameters = open(f'{file_name_parameters}.txt', 'r').readlines()
+        initial_point = eval(data_file_parameters[-1])
+        
+    else:
+        initial_point = np.zeros(ansatz.num_parameters) - 0.5
+        internal_energy = Transverse_Ising_Measurement(hamiltonian, ansatz.bind_parameters({theta: initial_point[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler)
+        if callback is not None:
+            file_parameters = open(f'{file_name_parameters}.txt', 'a+')
+            file_energy = open(f'{file_name_energy}.txt', 'a+')  
+            
+            file_parameters.write('Parameters \n \n')
+            file_energy.write('Energy \n \n')
+            
+            file_parameters.close()
+            file_energy.close()
+            
+            if str(optimize.__name__)[:16] == 'Customize_QNSPSA':
+                previous_fubini_matrix = np.zeros((ansatz.num_parameters, ansatz.num_parameters))
+                file_fubini_matrix_previous = open(f'{file_name_fubini_matrix_previous}.txt', "a+")
+                file_fubini_matrix_previous.write('Fubini-study metric previous \n \n')
+                file_fubini_matrix_previous.close()
+                callback(initial_point, internal_energy, previous_fubini_matrix)
+                
+            else: 
+                callback(initial_point, internal_energy)
+    
+  
+    data_file_parameter = open(f'{file_name_parameters}.txt', 'r').readlines()
+    file_length = len(data_file_parameter)
 
     start_time = time.time()
 
-    # Optimizee
-    energy = optimize(hamiltonian, initial_point, eta, ansatz, interation, shots, callback, sampler)        
+    # Real interation left
+    modified_interation = interation + 3 - file_length
 
+    
+    # Optimizer
+    if str(optimize.__name__)[:16] != 'Customize_QNSPSA':
+        energy = optimize(hamiltonian, initial_point, eta, ansatz, modified_interation, shots, callback, sampler)        
+    else:
+        if file_length != 3 :
+            data_file_fubini_study_previous = open(f'{file_name_fubini_matrix_previous}.txt', 'r').readlines()
+            #print((data_file_fubini_study_previous[-1]))
+            previous_fubini_matrix = np.array(eval(data_file_fubini_study_previous[-1]))
+            step = file_length - 3
+        else:
+            previous_fubini_matrix = np.zeros((ansatz.num_parameters, ansatz.num_parameters))
+            step = 0
+        energy = optimize(hamiltonian, initial_point, eta, ansatz, modified_interation, step, shots, callback, sampler, previous_fubini_matrix)      
     end_time = time.time()
 
 
@@ -100,6 +156,11 @@ def main(params):
     file_parameters.close()
     file_energy.close()
 
+    if str(optimize.__name__)[:16] == 'Customize_QNSPSA':
+        file_fubini_matrix_previous = open('{file_name_fubini_matrix_previous}.txt', "a+")
+        file_fubini_matrix_previous.write(f'{str(end_time-start_time)} \n')
+        file_fubini_matrix_previous.close()
+
     return
 
 
@@ -108,11 +169,14 @@ if __name__ == '__main__':
     num_qubits = 12
     optimizes = [Customize_Quantum_Natural_Gradient_Descent, Customize_QNSPSA_PRS_blocking]
     #external_field = np.linspace(0,2,11)
-    run_time = [0,1,2,3,4,5,6, 7]
-    external_field = [1.2]
+    run_time = [0,1,2,3,4,5,6]
+    external_field = [0.2]
+    
     for k in range(len(run_time)):
         for i in range(len(external_field)):
             params.append((num_qubits, external_field[i], optimizes[1], run_time[k]))
-    import concurrent.futures
-    executor = concurrent.futures.ProcessPoolExecutor()
-    executor.map(main, params)
+    #import concurrent.futures
+    #executor = concurrent.futures.ProcessPoolExecutor()
+    #executor.map(main, params)
+    for i in range(len(params)):
+      main(params[i])
