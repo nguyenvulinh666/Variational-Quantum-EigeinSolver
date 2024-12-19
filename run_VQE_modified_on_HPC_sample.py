@@ -198,8 +198,8 @@ if __name__ == '__main__':
       for i in range(len(external_field)):
           for k in range(len(run_time)):
               params.append((num_qubits[m], np.round(external_field[i],1), optimizes[-2], run_time[k]))
-    #import concurrent.futures
-    #executor = concurrent.futures.ProcessPoolExecutor()
-    #executor.map(main, params)
-    for i in range(len(params)):
-      main(params[i])
+    import concurrent.futures
+    executor = concurrent.futures.ProcessPoolExecutor()
+    executor.map(main, params)
+    #for i in range(len(params)):
+    #  main(params[i])
