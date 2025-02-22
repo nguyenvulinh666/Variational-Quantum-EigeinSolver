@@ -38,8 +38,9 @@ def main():
         'energy': [],
     }
 
-    entanglement = 'reverse_linear'
-    
+    #entanglement = 'reverse_linear'
+    entanglement = 'full'    
+
     hamiltonian = Ising_hamiltonian(num_qubits, J, h)
     
     ansatz = RealAmplitudes(num_qubits, entanglement, reps, insert_barriers=True).decompose()
@@ -51,7 +52,7 @@ def main():
     eta = 0.01
     shots = None
 
-    number_of_times = 7
+    number_of_times = 1
     
     
     for i in range(number_of_times):
