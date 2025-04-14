@@ -1,3 +1,4 @@
+# VQE for Ising Model \& A Comparative Analysis of Classical and Quantum Optimization Methods
 <strong>Abtract: </strong><br>
 In this study, we delved into several optimization methods, both classical and quantum, and ana-
 lyzed the quantum advantage that each of these methods offered, and then we proposed a new combinatorial
@@ -11,5 +12,6 @@ we also conducted a detailed study of quantum circuit ansatz structures in order
 best with the Ising model and NISQ, in which we utilized the symmetry of the investigated model. <br>
 
 <strong>Instruction for users: </strong> <br>
-All of the main source codes are contained within the CoreVQEModified.py file, which is used and executed by the run_VQE_modified_on_HPC_sample.py script to generate the dataset. Finally, all data visualizations were created by the Plot_data.ipynb notebook. <br>
-A list of required versions are provided in the Requirements.txt file.
+- All of the main source codes are contained within the CoreVQEModified.py file, which is used and executed by the run_VQE_modified_on_HPC_sample.py script to generate the dataset.
+- All data visualizations were created by the Plot_data.ipynb notebook. <br>
+- A list of required versions are provided in the Requirements.txt file.
