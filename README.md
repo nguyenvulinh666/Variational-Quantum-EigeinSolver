@@ -1,4 +1,4 @@
-# VQE for Ising Model \& A Comparative Analysis of Classical and Quantum Optimization Methods
+# Variational Quantum Eigensolver: A Comparative Analysis of Classical and Quantum Optimization Methods
 <strong>Abtract: </strong><br>
 In this study, we delved into several optimization methods, both classical and quantum, and ana-
 lyzed the quantum advantage that each of these methods offered, and then we proposed a new combinatorial
