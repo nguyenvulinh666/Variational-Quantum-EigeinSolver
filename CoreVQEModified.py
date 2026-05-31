@@ -371,36 +371,46 @@ def Customize_Finite_Difference(operator, initial_point, learning_rate, ansatz, 
 
 
 def Separate_Circuit_Apart(ansatz):
-
     super_circuit = []
 
     dag = circuit_to_dag(ansatz)
+    divide_to_layer_circuit = [
+        dag_to_circuit(layer['graph'])
+        for layer in dag.layers()
+    ]
 
-    divide_to_layer_circuit = []
-    for layer in dag.layers():
-        divide_to_layer_circuit.append(dag_to_circuit(layer['graph']))
-
-    num_layer = 0
-    for layer in range(len(divide_to_layer_circuit)):
-        layer += num_layer
-        if layer == len(divide_to_layer_circuit):
-            break
-        
+    layer = 0
+    while layer < len(divide_to_layer_circuit):
         internal_quantum_circuit = divide_to_layer_circuit[layer]
-        if internal_quantum_circuit[0].operation.params:
-            super_circuit.append(internal_quantum_circuit)
-        
-        if internal_quantum_circuit[0].operation.name == "barrier":
-            sub_circuit = QuantumCircuit(ansatz.num_qubits)
-            num_layer += 1
-            internal_layer = layer + num_layer
 
-            while divide_to_layer_circuit[internal_layer].data[0].operation.name != "barrier":      
-                sub_circuit = sub_circuit.compose(divide_to_layer_circuit[internal_layer])
-                internal_layer = layer
-                num_layer += 1
-                internal_layer += num_layer
-            super_circuit.append(sub_circuit)
+        if not internal_quantum_circuit.data:
+            layer += 1
+            continue
+
+        first_operation = internal_quantum_circuit.data[0].operation
+
+        if first_operation.name == "barrier":
+            sub_circuit = QuantumCircuit(ansatz.num_qubits)
+            layer += 1
+
+            while layer < len(divide_to_layer_circuit):
+                next_layer = divide_to_layer_circuit[layer]
+                if (
+                    next_layer.data
+                    and next_layer.data[0].operation.name == "barrier"
+                ):
+                    break
+                sub_circuit = sub_circuit.compose(next_layer)
+                layer += 1
+
+            if sub_circuit.data:
+                super_circuit.append(sub_circuit)
+            continue
+
+        if first_operation.params:
+            super_circuit.append(internal_quantum_circuit)
+
+        layer += 1
 
     return super_circuit
 
@@ -499,6 +509,9 @@ def Customize_Quantum_Natural_Gradient_Descent(operator, initial_point, learning
     
     
         for i in range(len(super_circuit)):
+            if not super_circuit[i].data:
+                continue
+
             if super_circuit[i][0].operation.params:
                 parameter_previous = 0
                 internal_circuit = QuantumCircuit(ansatz.num_qubits)
@@ -979,6 +992,9 @@ def Customize_QN_SPSA_blocking(operator, initial_point, learning_rate, ansatz, i
     
     
         for i in range(len(super_circuit)):
+            if not super_circuit[i].data:
+                continue
+
             if super_circuit[i][0].operation.params:
                 parameter_previous = 0
                 internal_circuit = QuantumCircuit(ansatz.num_qubits)
