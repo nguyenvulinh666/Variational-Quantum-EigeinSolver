@@ -1,5 +1,6 @@
 from qiskit.circuit import ParameterVector
 import numpy as np
+import os
 from qiskit.execute_function import execute
 from qiskit import BasicAer
 backend = BasicAer.get_backend('qasm_simulator')
@@ -21,6 +22,42 @@ from qiskit.primitives import Estimator, Sampler, BaseEstimator, BackendEstimato
 from qiskit.converters import circuit_to_dag, dag_to_circuit
 
 sampler = Sampler()
+
+def _env_int(name, default):
+    try:
+        return int(os.environ.get(name, default))
+    except (TypeError, ValueError):
+        return default
+
+def _parallel_map(function, params):
+    params = list(params)
+    if not params:
+        return []
+
+    backend_name = os.environ.get("VQE_PARALLEL_BACKEND", "process").lower()
+    workers = _env_int("VQE_WORKERS", min(len(params), os.cpu_count() or 1))
+    workers = max(1, min(workers, len(params)))
+
+    if backend_name in {"0", "none", "serial"} or workers == 1:
+        return [function(param) for param in params]
+
+    import concurrent.futures
+
+    executor_class = (
+        concurrent.futures.ThreadPoolExecutor
+        if backend_name in {"thread", "threads"}
+        else concurrent.futures.ProcessPoolExecutor
+    )
+
+    try:
+        with executor_class(max_workers=workers) as executor:
+            return list(executor.map(function, params))
+    except (OSError, PermissionError):
+        return [function(param) for param in params]
+
+def _debug_print(*args, **kwargs):
+    if os.environ.get("VQE_DEBUG"):
+        print(*args, **kwargs)
 
 def mini_derivate(param):
     theta_position, h, divide, initial_point, operator, ansatz, shots, sampler = param
@@ -73,7 +110,7 @@ def SwapTest(circ1, circ2):
 
 #     overlap_value = 1 - 2*Statevector(circ).probabilities([0])[1]
     
-    return overlap_value, circ
+    # return overlap_value, circ
 
 def matrix_power(matrix, coeff):
     eigen_value, eigen_vector = eig(matrix)
@@ -227,10 +264,10 @@ def Customize_Parameter_Shift_Rule(operator, initial_point, learning_rate, ansat
     """
     
     internal_initial_point = initial_point.copy()
+    energy = []
     
     # Write Interation Energy to variable Energy
     if callback is None:
-      energy = []
       internal_energy = Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: internal_initial_point[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler)
       energy.append(internal_energy)
       
@@ -251,9 +288,7 @@ def Customize_Parameter_Shift_Rule(operator, initial_point, learning_rate, ansat
         for i in range(ansatz.num_parameters):
             params.append((i, np.pi/2, 1, internal_initial_point, operator, ansatz, shots, sampler))
 
-        import concurrent.futures
-        executor = concurrent.futures.ProcessPoolExecutor()
-        grad = list(executor.map(mini_derivate, params))
+        grad = np.asarray(_parallel_map(mini_derivate, params), dtype=float)
 
         internal_initial_point =  np.subtract(internal_initial_point, learning_rate*grad)
 
@@ -316,9 +351,7 @@ def Customize_Finite_Difference(operator, initial_point, learning_rate, ansatz, 
         for i in range(ansatz.num_parameters):
             params.append((i, h, h, internal_initial_point, operator, ansatz, shots, sampler))
 
-        import concurrent.futures
-        executor = concurrent.futures.ProcessPoolExecutor()
-        grad = list(executor.map(mini_derivate, params))
+        grad = np.asarray(_parallel_map(mini_derivate, params), dtype=float)
 
         internal_initial_point =  np.subtract(internal_initial_point, learning_rate*np.array(grad))
         
@@ -513,9 +546,7 @@ def Customize_Quantum_Natural_Gradient_Descent(operator, initial_point, learning
             params.append((i, np.pi/2, 1, internal_initial_point, operator, ansatz, shots, sampler))
 
 
-        import concurrent.futures
-        executor = concurrent.futures.ProcessPoolExecutor()
-        grad = list(executor.map(mini_derivate, params))
+        grad = np.asarray(_parallel_map(mini_derivate, params), dtype=float)
 
 
         #print(fubini_study_metric)
@@ -531,7 +562,7 @@ def Customize_Quantum_Natural_Gradient_Descent(operator, initial_point, learning
         internal_ansatz = ansatz.bind_parameters({theta: internal_initial_point[k] for k, theta in enumerate(ansatz.parameters)})   
         internal_energy = Transverse_Ising_Measurement(operator, internal_ansatz, shots, sampler)
         energy.append(internal_energy)
-        print(internal_energy)
+        _debug_print(internal_energy)
         #print(f'{internal_initial_point} ---------')
 
         if callback is not None:
@@ -653,15 +684,13 @@ def Customize_QNSPSA_PRS_blocking(operator, initial_point, learning_rate, ansatz
         for i in range(ansatz.num_parameters):
             params.append((i, np.pi/2, 1, internal_initial_point, operator, ansatz, shots, sampler))
 
-        import concurrent.futures
-        executor = concurrent.futures.ProcessPoolExecutor()
-        gradPRS = list(executor.map(mini_derivate, params))
+        gradPRS = np.asarray(_parallel_map(mini_derivate, params), dtype=float)
 
         # print('gradPRS: ', gradPRS)
 
         while True:    
             grad = np.zeros(ansatz.num_parameters)
-            print(last_n_steps)
+            _debug_print(last_n_steps)
             ck = 0.01
             ak = learning_rate
             # Natural Gradient Part
@@ -781,9 +810,7 @@ def Customize_QNSPSA_PRS_blocking_MonteCarlo(operator, initial_point, learning_r
         for i in range(ansatz.num_parameters):
             params.append((i, np.pi/2, 1, internal_initial_point, operator, ansatz, shots, sampler))
 
-        import concurrent.futures
-        executor = concurrent.futures.ProcessPoolExecutor()
-        gradPRS = list(executor.map(mini_derivate, params))
+        gradPRS = np.asarray(_parallel_map(mini_derivate, params), dtype=float)
 
         # print('gradPRS: ', gradPRS)
         
@@ -1261,5 +1288,3 @@ def Customize_QNSPSA_SPSA_MonteCarlo(operator, initial_point, learning_rate, ans
     if callback is None:
       return energy
     
-
-
