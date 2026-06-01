@@ -192,8 +192,10 @@ class CostModel:
             "fd": 0,
             "spsa": 0,
             "qnbda_psr": qnbda_layers,
+            "qnbda_fd": qnbda_layers,
             "qnbda_spsa": qnbda_layers,
             "qnspsa_psr": 4,
+            "qnspsa_fd": 4,
             "qnspsa_spsa": 4,
             "qnspsa_psr_mc": None,
             "qnspsa_spsa_mc": None,
@@ -204,8 +206,10 @@ class CostModel:
             "fd": 2 * p,
             "spsa": 2,
             "qnbda_psr": 2 * p,
+            "qnbda_fd": 2 * p,
             "qnbda_spsa": 2,
             "qnspsa_psr": 2 * p,
+            "qnspsa_fd": 2 * p,
             "qnspsa_spsa": 2,
             "qnspsa_psr_mc": 2 * p,
             "qnspsa_spsa_mc": 2,
@@ -457,6 +461,12 @@ class QNBDAPSROptimizer(LegacyGradientOptimizer):
     core_function_name = "Customize_Quantum_Natural_Gradient_Descent"
 
 
+class QNBDAFDOptimizer(LegacyGradientOptimizer):
+    method_key = "qnbda_fd"
+    display_name = "QN-BDA+FD"
+    core_function_name = "Customize_QN_BDA_Finite_Difference"
+
+
 class QNBDASPSAOptimizer(LegacyGradientOptimizer):
     method_key = "qnbda_spsa"
     display_name = "QN-BDA+SPSA"
@@ -467,6 +477,13 @@ class QNSPSAPSROptimizer(LegacyGradientOptimizer):
     method_key = "qnspsa_psr"
     display_name = "QN-SPSA+PSR"
     core_function_name = "Customize_QNSPSA_PRS_blocking"
+    uses_qnspsa_state = True
+
+
+class QNSPSAFDOptimizer(LegacyGradientOptimizer):
+    method_key = "qnspsa_fd"
+    display_name = "QN-SPSA+FD"
+    core_function_name = "Customize_QNSPSA_FD_blocking"
     uses_qnspsa_state = True
 
 
@@ -524,8 +541,10 @@ OPTIMIZER_CLASSES: List[Type[Optimizer]] = [
     FDOptimizer,
     SPSAOptimizer,
     QNBDAPSROptimizer,
+    QNBDAFDOptimizer,
     QNBDASPSAOptimizer,
     QNSPSAPSROptimizer,
+    QNSPSAFDOptimizer,
     QNSPSASPSAOptimizer,
     QNSPSAPSRMonteCarloOptimizer,
     QNSPSASPSAMonteCarloOptimizer,
@@ -556,12 +575,19 @@ METHOD_ALIASES: Dict[str, str] = {
     "qnbda+psr": "qnbda_psr",
     "qng": "qnbda_psr",
     "qng_psr": "qnbda_psr",
+    "qn_bda_fd": "qnbda_fd",
+    "qn-bda+fd": "qnbda_fd",
+    "qnbda+fd": "qnbda_fd",
+    "qng_fd": "qnbda_fd",
     "qn_bda_spsa": "qnbda_spsa",
     "qn-bda+spsa": "qnbda_spsa",
     "qnbda+spsa": "qnbda_spsa",
     "qn_spsa_psr": "qnspsa_psr",
     "qn-spsa+psr": "qnspsa_psr",
     "qnspsa+psr": "qnspsa_psr",
+    "qn_spsa_fd": "qnspsa_fd",
+    "qn-spsa+fd": "qnspsa_fd",
+    "qnspsa+fd": "qnspsa_fd",
     "qn_spsa_spsa": "qnspsa_spsa",
     "qn-spsa+spsa": "qnspsa_spsa",
     "qnspsa+spsa": "qnspsa_spsa",

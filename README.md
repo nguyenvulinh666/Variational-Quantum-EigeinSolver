@@ -42,8 +42,9 @@ python run_revision_sweep.py \
   --out results/revision
 ```
 
-Useful method names are `psr`, `fd`, `spsa`, `qnbda_psr`, `qnbda_spsa`,
-`qnspsa_psr`, `qnspsa_spsa`, `qnspsa_psr_mc`, `qnspsa_spsa_mc`, and `cobyla`.
+Useful method names are `psr`, `fd`, `spsa`, `qnbda_psr`, `qnbda_fd`,
+`qnbda_spsa`, `qnspsa_psr`, `qnspsa_fd`, `qnspsa_spsa`,
+`qnspsa_psr_mc`, `qnspsa_spsa_mc`, and `cobyla`.
 Use `--method all-current` to run every method currently exposed by the source
 repo. Repeat `--method` or comma-separate methods to run a smaller set.
 

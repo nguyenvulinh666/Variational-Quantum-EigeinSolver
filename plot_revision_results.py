@@ -16,13 +16,28 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 METHOD_ORDER = [
     "COBYLA",
     "SPSA",
-    "FD",
     "PSR",
+    "FD",
     "QN-BDA+SPSA",
+    "QN-BDA+FD",
     "QN-BDA+PSR",
     "QN-SPSA+SPSA",
+    "QN-SPSA+FD",
     "QN-SPSA+PSR",
 ]
+
+METHOD_STYLES = {
+    "COBYLA": {"color": "tab:blue", "linestyle": "-"},
+    "SPSA": {"color": "tab:orange", "linestyle": "-"},
+    "PSR": {"color": "tab:red", "linestyle": "-"},
+    "FD": {"color": "tab:green", "linestyle": "--"},
+    "QN-BDA+SPSA": {"color": "tab:purple", "linestyle": "-"},
+    "QN-BDA+FD": {"color": "tab:olive", "linestyle": "--"},
+    "QN-BDA+PSR": {"color": "tab:brown", "linestyle": "-"},
+    "QN-SPSA+SPSA": {"color": "tab:pink", "linestyle": "-"},
+    "QN-SPSA+FD": {"color": "tab:cyan", "linestyle": "--"},
+    "QN-SPSA+PSR": {"color": "tab:gray", "linestyle": "-"},
+}
 
 
 def read_json(path: Path) -> Dict[str, Any]:
@@ -209,6 +224,52 @@ def averaged_series(
     return [(x_value, statistics.fmean(values)) for x_value, values in sorted(by_x.items())]
 
 
+def series_stats(
+    group: Sequence[Dict[str, Any]],
+    x_key: str,
+) -> List[Tuple[float, float, float, float, int]]:
+    by_x: Dict[float, List[float]] = defaultdict(list)
+    for run in group:
+        for row in run["trajectory"]:
+            x_value = row.get(x_key)
+            y_value = row.get("relative_error")
+            if x_value is None or y_value is None:
+                continue
+            by_x[float(x_value)].append(float(y_value))
+
+    stats = []
+    for x_value, values in sorted(by_x.items()):
+        center = statistics.fmean(values)
+        if len(values) > 1:
+            lower = percentile(values, 15.865)
+            upper = percentile(values, 84.135)
+        else:
+            lower = center
+            upper = center
+        stats.append((x_value, center, lower, upper, len(values)))
+    return stats
+
+
+def percentile(values: Sequence[float], q: float) -> float:
+    ordered = sorted(values)
+    if not ordered:
+        raise ValueError("percentile requires at least one value")
+    if len(ordered) == 1:
+        return ordered[0]
+
+    position = (len(ordered) - 1) * q / 100.0
+    lower_index = int(math.floor(position))
+    upper_index = int(math.ceil(position))
+    if lower_index == upper_index:
+        return ordered[lower_index]
+
+    fraction = position - lower_index
+    return (
+        ordered[lower_index] * (1.0 - fraction)
+        + ordered[upper_index] * fraction
+    )
+
+
 def plot_group(
     runs: Sequence[Dict[str, Any]],
     output: Path,
@@ -224,13 +285,37 @@ def plot_group(
             run
         )
 
-    fig, ax = plt.subplots(figsize=(7.0, 4.5))
+    fig, ax = plt.subplots(figsize=(7.2, 4.6))
     for method_name in sorted(grouped, key=method_sort_key):
-        series = averaged_series(grouped[method_name], x_key)
-        if not series:
+        stats = series_stats(grouped[method_name], x_key)
+        if not stats:
             continue
-        x_values, y_values = zip(*series)
-        ax.plot(x_values, y_values, marker="o", linewidth=1.5, markersize=3, label=method_name)
+        x_values = [item[0] for item in stats]
+        y_values = [item[1] for item in stats]
+        lower_values = [max(item[2], 1e-14) for item in stats]
+        upper_values = [max(item[3], 1e-14) for item in stats]
+        counts = [item[4] for item in stats]
+        style = METHOD_STYLES.get(method_name, {})
+        color = style.get("color")
+
+        if max(counts) > 1 and lower_values != upper_values:
+            ax.fill_between(
+                x_values,
+                lower_values,
+                upper_values,
+                color=color,
+                alpha=0.16,
+                linewidth=0,
+            )
+
+        ax.plot(
+            x_values,
+            y_values,
+            linewidth=1.8,
+            label=method_name,
+            color=color,
+            linestyle=style.get("linestyle", "-"),
+        )
 
     ax.set_title(title)
     ax.set_xlabel(x_label)

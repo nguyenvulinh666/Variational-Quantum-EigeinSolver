@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# Raw reviewer-response run directories are large. Keep aggregate CSVs,
+# manifests, and generated figures in git; archive raw runs separately.
+results/
+revision_fd_natural_20260601_cluster/
+revision_fd_natural_smoke_20260601/

@@ -11,16 +11,18 @@ from pathlib import Path
 from typing import Iterable, List, Optional
 
 
-DETERMINISTIC_METHODS = {"psr", "fd", "cobyla", "qnbda_psr"}
-STOCHASTIC_METHODS = {"spsa", "qnbda_spsa", "qnspsa_psr", "qnspsa_spsa"}
+DETERMINISTIC_METHODS = {"psr", "fd", "cobyla", "qnbda_psr", "qnbda_fd"}
+STOCHASTIC_METHODS = {"spsa", "qnbda_spsa", "qnspsa_psr", "qnspsa_fd", "qnspsa_spsa"}
 DEFAULT_METHODS = [
     "psr",
     "fd",
     "spsa",
     "cobyla",
     "qnbda_psr",
+    "qnbda_fd",
     "qnbda_spsa",
     "qnspsa_psr",
+    "qnspsa_fd",
     "qnspsa_spsa",
 ]
 

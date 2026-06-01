@@ -415,6 +415,79 @@ def Separate_Circuit_Apart(ansatz):
     return super_circuit
 
 
+def _calculate_block_diagonal_fubini_metric(super_circuit, ansatz, parameter, shots, sampler):
+    def Measure_element_of_Fubini_Study_metric(circuit, circuit_for_measurement, i, j, shots, sampler):
+        if i != j:
+            term1 = ['I']*len(circuit)
+            term2 = ['I']*len(circuit)
+            term3 = ['I']*len(circuit)
+
+            if circuit[i].operation.name == 'rx':
+                term1[i] = 'X'
+                term2[i] = 'X'
+            if circuit[i].operation.name == 'ry':
+                term1[i] = 'Y'
+                term2[i] = 'Y'
+            if circuit[i].operation.name == 'rz':
+                term1[i] = 'Z'
+                term2[i] = 'Z'
+
+            if circuit[j].operation.name == 'rx':
+                term1[j] = 'X'
+                term3[j] = 'X'
+            if circuit[j].operation.name == 'ry':
+                term1[j] = 'Y'
+                term3[j] = 'Y'
+            if circuit[j].operation.name == 'rz':
+                term1[j] = 'Z'
+                term3[j] = 'Z'
+
+            term1 = ''.join(term1[::-1])
+            term2 = ''.join(term2[::-1])
+            term3 = ''.join(term3[::-1])
+
+            return  (Transverse_Ising_Measurement(term1, circuit_for_measurement, shots, sampler) - Transverse_Ising_Measurement(term2, circuit_for_measurement, shots, sampler)*Transverse_Ising_Measurement(term3, circuit_for_measurement, shots, sampler))/4
+
+        term2 = ['I']*len(circuit)
+
+        if circuit[i].operation.name == 'rx':
+            term2[i] = 'X'
+        if circuit[i].operation.name == 'ry':
+            term2[i] = 'Y'
+        if circuit[i].operation.name == 'rz':
+            term2[i] = 'Z'
+
+        term2 = ''.join(term2[::-1])
+
+        return (1 - Transverse_Ising_Measurement(term2, circuit_for_measurement, shots, sampler).real**2)/4
+
+    fubini_study_metric = np.zeros((ansatz.num_parameters, ansatz.num_parameters))
+    initial_point = parameter.copy()
+
+    for i in range(len(super_circuit)):
+        if not super_circuit[i].data:
+            continue
+
+        if super_circuit[i][0].operation.params:
+            parameter_previous = 0
+            internal_circuit = QuantumCircuit(ansatz.num_qubits)
+
+            for j in range(i):
+                parameter_previous += super_circuit[j].num_parameters
+                internal_circuit = internal_circuit.compose(super_circuit[j])
+
+            internal_circuit = internal_circuit.bind_parameters({theta: initial_point[i] for i, theta in enumerate(internal_circuit.parameters)})
+
+            for l in range(super_circuit[i].num_parameters):
+                for m in range(l+1, super_circuit[i].num_parameters):
+                    fubini_study_metric[l + parameter_previous][m + parameter_previous] = Measure_element_of_Fubini_Study_metric(super_circuit[i], internal_circuit, l, m, shots, sampler)
+                    fubini_study_metric[m + parameter_previous][l + parameter_previous] = fubini_study_metric[l + parameter_previous][m + parameter_previous]
+            for l in range(super_circuit[i].num_parameters):
+                    fubini_study_metric[l + parameter_previous][l + parameter_previous] = Measure_element_of_Fubini_Study_metric(super_circuit[i], internal_circuit, l, l, shots, sampler)
+
+    return fubini_study_metric
+
+
 
 def Customize_Quantum_Natural_Gradient_Descent(operator, initial_point, learning_rate, ansatz, interation, shots, callback, sampler):
     """
@@ -581,6 +654,50 @@ def Customize_Quantum_Natural_Gradient_Descent(operator, initial_point, learning
         if callback is not None:
             callback(internal_initial_point, internal_energy)
     
+    if callback is None:
+        return energy
+
+
+def Customize_QN_BDA_Finite_Difference(operator, initial_point, learning_rate, ansatz, interation, shots, callback, sampler):
+    """
+    QN-BDA natural-gradient descent with finite-difference gradients.
+    """
+
+    energy = []
+    internal_initial_point = initial_point.copy()
+    super_circuit = Separate_Circuit_Apart(ansatz)
+    h = 1e-2
+
+    for i in range(interation):
+        fubini_study_metric = np.array(
+            _calculate_block_diagonal_fubini_metric(
+                super_circuit,
+                ansatz,
+                internal_initial_point,
+                shots,
+                sampler,
+            )
+        )
+
+        params = []
+        for i in range(ansatz.num_parameters):
+            params.append((i, h, h, internal_initial_point, operator, ansatz, shots, sampler))
+
+        grad = np.asarray(_parallel_map(mini_derivate, params), dtype=float)
+
+        FS_metric_inv = np.linalg.pinv(fubini_study_metric)
+        combine = learning_rate*FS_metric_inv.dot(np.array(grad))
+
+        internal_initial_point = np.subtract(internal_initial_point, combine)
+
+        internal_ansatz = ansatz.bind_parameters({theta: internal_initial_point[k] for k, theta in enumerate(ansatz.parameters)})
+        internal_energy = Transverse_Ising_Measurement(operator, internal_ansatz, shots, sampler)
+        energy.append(internal_energy)
+        _debug_print(internal_energy)
+
+        if callback is not None:
+            callback(internal_initial_point, internal_energy)
+
     if callback is None:
         return energy
 
@@ -767,6 +884,80 @@ def Customize_QNSPSA_PRS_blocking(operator, initial_point, learning_rate, ansatz
         #print(f'{internal_initial_point} ---------')
         # print(f'gradSPSA {gradSPSA}')
         # print(f'regularized_fubini_matrix: {np.linalg.pinv(regularized_fubini_matrix)}')
+
+        if callback is not None:
+            callback(internal_initial_point, internal_energy, regularized_fubini_matrix_previous)
+
+        last_n_steps[(k) % len(last_n_steps)] = internal_energy
+    return energy
+
+
+def Customize_QNSPSA_FD_blocking(operator, initial_point, learning_rate, ansatz, interation, step, shots, callback, sampler, previous_fubini_matrix, last_n_steps):
+    """
+    QN-SPSA metric estimator with finite-difference gradients.
+    """
+
+    beta = 0.001
+    h = 1e-2
+
+    internal_initial_point = initial_point.copy()
+
+    energy = []
+
+    regularized_fubini_matrix_previous = previous_fubini_matrix.copy()
+
+    internal_energy = Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: internal_initial_point[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler)
+
+    energy.append(internal_energy)
+
+    for k in range(interation):
+        k += step + 1
+        next_energy = 0
+
+        params = []
+        for i in range(ansatz.num_parameters):
+            params.append((i, h, h, internal_initial_point, operator, ansatz, shots, sampler))
+
+        gradFD = np.asarray(_parallel_map(mini_derivate, params), dtype=float)
+
+        while True:
+            ck = 0.01
+            ak = learning_rate
+
+            random1 = np.array([np.random.choice([-1,1]) for _ in range(ansatz.num_parameters)])
+            random2 = np.array([np.random.choice([-1,1]) for _ in range(ansatz.num_parameters)])
+            initial_plus1_plus2 = np.add(internal_initial_point, np.add(ck*random1, ck*random2))
+            initial_plus1 = np.add(internal_initial_point, ck*random1)
+            initial_minus1_plus2 = np.subtract(internal_initial_point, np.subtract(ck*random1, ck*random2))
+            initial_minus1 = np.subtract(internal_initial_point, ck*random1)
+
+            ansatz_initial = ansatz.bind_parameters({theta: internal_initial_point[k] for k, theta in enumerate(ansatz.parameters)})
+            ansatz_plus1_plus2 = ansatz.bind_parameters({theta: initial_plus1_plus2[k] for k, theta in enumerate(ansatz.parameters)})
+            ansatz_plus1 = ansatz.bind_parameters({theta: initial_plus1[k] for k, theta in enumerate(ansatz.parameters)})
+            ansatz_minus1_plus2 = ansatz.bind_parameters({theta: initial_minus1_plus2[k] for k, theta in enumerate(ansatz.parameters)})
+            ansatz_minus1 =  ansatz.bind_parameters({theta: initial_minus1[k] for k, theta in enumerate(ansatz.parameters)})
+
+            deltaF = SwapTest(ansatz_initial, ansatz_plus1_plus2) - SwapTest(ansatz_initial, ansatz_plus1) - SwapTest(ansatz_initial, ansatz_minus1_plus2) + SwapTest(ansatz_initial, ansatz_minus1)
+
+            fubini_matrix = -1/2*(deltaF/(2*ck**2))*(np.array(np.array([random1]).T*random2) + np.array(np.array([random2]).T*random1))/2
+
+            exponentially_smoothed_fubini = k/(k+1)*regularized_fubini_matrix_previous + 1/(k+1)*fubini_matrix.copy()
+            regularized_fubini_matrix = np.add(matrix_power(np.dot(exponentially_smoothed_fubini,exponentially_smoothed_fubini), 1/2).real, beta*np.identity(ansatz.num_parameters))
+
+            grad = ak*np.linalg.pinv(regularized_fubini_matrix).dot(gradFD)
+
+            internal_initial_point_while = np.subtract(internal_initial_point, grad)
+            tolerance = 2 * last_n_steps.std() if (k-1 > len(last_n_steps)) else 2 * last_n_steps[:k].std()
+            next_energy = Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: internal_initial_point_while[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler)
+
+            if next_energy <= internal_energy + tolerance:
+                break
+
+        regularized_fubini_matrix_previous = regularized_fubini_matrix.copy()
+
+        internal_initial_point = np.subtract(internal_initial_point, grad)
+        internal_energy = Transverse_Ising_Measurement(operator, ansatz.bind_parameters({theta: internal_initial_point[i] for i, theta in enumerate(ansatz.parameters)}), shots, sampler)
+        energy.append(internal_energy)
 
         if callback is not None:
             callback(internal_initial_point, internal_energy, regularized_fubini_matrix_previous)
