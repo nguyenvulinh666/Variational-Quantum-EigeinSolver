@@ -12,15 +12,14 @@ we also conducted a detailed study of quantum circuit ansatz structures in order
 best with the Ising model and NISQ, in which we utilized the symmetry of the investigated model. <br>
 
 <strong>Instruction for users: </strong> <br>
-- All of the main source codes are contained within the CoreVQEModified.py file, which is used and executed by the run_VQE_modified_on_HPC_sample.py script to generate the dataset.
+- All of the main source codes are contained within the CoreVQEModified.py file, which is used and executed by the run_VQE_modified_on_HPC_sample.py script to generate the dataset. run_VQE_modified_on_HPC_sample_v3.py is a modified version of CoreVQEModified.py that is better for parallelization for HPC
 - All data visualizations were created by the Plot_data.ipynb notebook. <br>
 - A list of required versions are provided in the Requirements.txt file.
 
 ## Figure 3 and Figure 4 campaigns
 
 The revised Figure 3 and Figure 4 data are generated from the native legacy
-trajectory format under `energy/`. They do not use the deleted
-`revision_*` sweep pipeline. The existing legacy rows remain in `energy/`; the
+trajectory format under `energy/`. The existing legacy rows remain in `energy/`; the
 new rows added for the complete 3 x 3 optimizer grid are PSR, QN-BDA+FD, and
 QN-SPSA+FD for both reverse-linear and full entanglement. The file
 `figures/figure3_4_new_rows_manifest_20260603.txt` lists the exact raw
