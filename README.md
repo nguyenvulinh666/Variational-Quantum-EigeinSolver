@@ -1,6 +1,6 @@
 # Variational Quantum Eigensolver: A Comparative Analysis of Classical and Quantum Optimization Methods
 <strong>Abtract: </strong><br>
-In this study, we delved into several optimization methods, both classical and quantum, and ana-
+In this study https://arxiv.org/abs/2412.19176, we delved into several optimization methods, both classical and quantum, and ana-
 lyzed the quantum advantage that each of these methods offered, and then we proposed a new combinatorial
 optimization scheme, deemed as QN-SPSA+PSR which combines calculating approximately Fubini-study metric
 (QN-SPSA) and the exact evaluation of gradient by Parameter-Shift Rule (PSR). The QN-SPSA+PSR method
