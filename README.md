@@ -16,83 +16,67 @@ best with the Ising model and NISQ, in which we utilized the symmetry of the inv
 - All data visualizations were created by the Plot_data.ipynb notebook. <br>
 - A list of required versions are provided in the Requirements.txt file.
 
-## Revision sweep runner
+## Figure 3 and Figure 4 campaigns
 
-Use `run_revision_sweep.py` for new manuscript-revision experiments. It is a
-thin CLI wrapper around `revision_experiment.py`, which contains the structured
-experiment config, optimizer adapters, cost model, result writer, and aggregate
-helpers. The legacy optimizer implementations remain in `CoreVQEModified.py`.
-New runs stay separate from the legacy `energy/`, `parameter/`, and
-`fubini_matrix_previous/` text dumps by writing one self-contained directory per
-configuration under `results/revision/`.
+The revised Figure 3 and Figure 4 data are generated from the native legacy
+trajectory format under `energy/`. They do not use the deleted
+`revision_*` sweep pipeline. The existing legacy rows remain in `energy/`; the
+new rows added for the complete 3 x 3 optimizer grid are PSR, QN-BDA+FD, and
+QN-SPSA+FD for both reverse-linear and full entanglement. The file
+`figures/figure3_4_new_rows_manifest_20260603.txt` lists the exact raw
+trajectory files added for those rows.
 
-Example single run:
+The launchers used on the VM were:
+
+- `run_campaign.py`: reverse-linear entanglement, using
+  `run_VQE_modified_on_HPC_sample_v3.py`.
+- `run_campaign_full.py`: full entanglement, using
+  `run_VQE_modified_on_HPC_sample_full.py`.
+
+Both launchers write directly to `energy/` using the same filename convention as
+the legacy data. The `--list` option prints the planned output filenames without
+running the campaign.
+
+Figure 3 uses the 12-qubit, reps=1, h=2.0, 500-iteration reverse-linear data.
+The command used to generate the three new raw-data rows was:
 
 ```bash
-python run_revision_sweep.py \
-  --method qnspsa_psr \
-  --n 12 \
-  --h 2.0 \
-  --ansatz RealAmplitudes \
-  --reps 2 \
-  --entanglement reverse_linear \
+python run_campaign.py \
+  --methods psr,qnbda_fd,qnspsa_fd \
+  --reps 1 \
   --iterations 500 \
-  --seed 17 \
-  --shots none \
-  --out results/revision
+  --jobs 7 \
+  --grad-workers 36 \
+  --h 2.0
 ```
 
-Useful method names are `psr`, `fd`, `spsa`, `qnbda_psr`, `qnbda_fd`,
-`qnbda_spsa`, `qnspsa_psr`, `qnspsa_fd`, `qnspsa_spsa`,
-`qnspsa_psr_mc`, `qnspsa_spsa_mc`, and `cobyla`.
-Use `--method all-current` to run every method currently exposed by the source
-repo. Repeat `--method` or comma-separate methods to run a smaller set.
-
-Each run directory contains:
-
-- `metadata.json`: configuration, ansatz size, random seed, Qiskit version, git
-  commit, and nominal quantum-evaluation cost per optimizer update.
-- `trajectory.csv`: step, phase, energy, relative error when exact diagonalizing
-  is feasible, elapsed time, and the parameter vector as JSON.
-- `parameters.npy`: dense parameter-history array for post-processing.
-- `summary.json`: final/best energy, final/best absolute and relative errors,
-  and nominal total quantum-evaluation count.
-
-For cluster use, prefer one scheduler task per `(method, n, h, seed)` rather
-than wrapping a large Python `ProcessPoolExecutor` around the sweep. The
-optimizer implementations can parallelize PSR/FD gradient calls internally; set
-`VQE_WORKERS=32` or another scheduler-appropriate value to cap per-run workers.
-Use `VQE_PARALLEL_BACKEND=serial` for debugging and local smoke tests.
-
-Dry-run example:
+Figure 4 compares the same 12-qubit, reps=1, h=2.0, 500-iteration trajectories
+for reverse-linear and full entanglement. The reverse-linear data are generated
+with the same command above. The full-entanglement rows were generated with:
 
 ```bash
-python run_revision_sweep.py --method qnspsa_psr,cobyla --n 12 --h 2.0 \
-  --run-label smoke --dry-run
+python run_campaign_full.py \
+  --methods psr,qnbda_fd,qnspsa_fd \
+  --reps 1 \
+  --iterations 500 \
+  --jobs 7 \
+  --grad-workers 36 \
+  --h 2.0
 ```
 
-Aggregate completed runs into a table-ready CSV:
+These commands regenerate the raw trajectories behind the paper Figure 3 and
+Figure 4 panels. The manuscript plotting scripts used for final figure styling
+are kept with the paper source and are not committed in this repository.
 
-```bash
-python aggregate_revision_results.py results/revision \
-  --out results/revision_summary.csv
-```
 
-Generate cluster command manifests:
+Useful method keys are `cobyla`, `spsa`, `fd`, `psr`, `qnbda_spsa`,
+`qnbda_fd`, `qnbda_psr`, `qnspsa_spsa`, `qnspsa_fd`, and `qnspsa_psr`.
+Deterministic methods run one seed by default; stochastic methods run seven
+seeds. This default is the setting used for the Figure 3/4 consistency check:
+PSR and QN-BDA+FD each produce one raw trajectory, while QN-SPSA+FD produces
+seven stochastic trajectories.
 
-```bash
-python generate_revision_manifest.py --preset smoke \
-  --label revision_smoke_20260531 \
-  --out results/revision_smoke_20260531_commands.txt
-
-python generate_revision_manifest.py --preset full \
-  --label revision_full_20260531 \
-  --out results/revision_full_20260531_commands.txt
-```
-
-Create seed-aggregated tables and plots:
-
-```bash
-python plot_revision_results.py results/revision/revision_full_20260531 \
-  --out-dir results/revision_full_20260531_plots
-```
+For cluster use, choose `--jobs` and `--grad-workers` so that
+`jobs * grad-workers` fits the available cores. Re-running a campaign is safe:
+the harnesses reuse the native checkpoint/resume behavior and overwrite only the
+corresponding method/seed trajectory files.
