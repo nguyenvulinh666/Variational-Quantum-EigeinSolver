@@ -12,7 +12,7 @@ we also conducted a detailed study of quantum circuit ansatz structures in order
 best with the Ising model and NISQ, in which we utilized the symmetry of the investigated model. <br>
 
 <strong>Instruction for users: </strong> <br>
-- All of the main source codes are contained within the CoreVQEModified.py file, which is used and executed by the run_VQE_modified_on_HPC_sample.py script to generate the dataset. run_VQE_modified_on_HPC_sample_v3.py is a modified version of CoreVQEModified.py that is better for parallelization for HPC
+- All of the main source codes are contained within the CoreVQEModified.py file, which is used and executed by the run_VQE_modified_on_HPC_sample.py script to generate the dataset. run_VQE_modified_on_HPC_sample_v3.py is a modified version (assisted by Claude for parallelization) of CoreVQEModified.py that is faster implementations on VMs/clusters. 
 - All data visualizations were created by the Plot_data.ipynb notebook. <br>
 - A list of required versions are provided in the Requirements.txt file.
 
